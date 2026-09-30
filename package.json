@@ -1,0 +1,23 @@
+{
+  "name": "kahoot-hope",
+  "version": "1.0.0",
+  "description": "Real-time Kahoot-style quiz platform (Express + Socket.io)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
+    "express": "^5.2.1",
+    "ioredis": "^6.0.0",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.4"
+  }
+}

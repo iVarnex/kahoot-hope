@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anfitrión · Quiz en vivo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-indigo-950 text-white">
+  <div id="connection-banner" class="hidden bg-amber-500 text-black text-center py-1 text-sm font-semibold">Reconectando…</div>
+
+  <main class="mx-auto max-w-6xl p-6">
+    <section id="screen-create" class="hidden text-center pt-24 space-y-8">
+      <h1 class="text-5xl font-extrabold">Quiz en vivo</h1>
+      <p class="text-indigo-200 text-lg">Kahoot: wishes about a possible situation (hope)</p>
+      <fieldset class="flex justify-center gap-4">
+        <label class="cursor-pointer rounded-xl bg-indigo-900 px-5 py-3 has-[:checked]:ring-4 ring-white">
+          <input type="radio" name="mode" value="full" class="mr-2" checked>Completo (9 preguntas)
+        </label>
+        <label class="cursor-pointer rounded-xl bg-indigo-900 px-5 py-3 has-[:checked]:ring-4 ring-white">
+          <input type="radio" name="mode" value="short" class="mr-2">Corto (5 preguntas)
+        </label>
+      </fieldset>
+      <button id="create-room" class="rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-10 py-4 text-2xl font-bold text-black">Crear sala</button>
+      <p id="create-error" class="text-red-300"></p>
+    </section>
+
+    <section id="screen-lobby" class="hidden space-y-8">
+      <div class="text-center space-y-2">
+        <p class="text-indigo-200 text-xl">Entra desde tu celular a <span id="join-url" class="font-bold text-white"></span></p>
+        <p class="text-indigo-200 text-xl">con el PIN</p>
+        <p id="lobby-pin" class="text-8xl font-black tracking-[0.3em] bg-white text-indigo-950 rounded-3xl inline-block px-10 py-4"></p>
+      </div>
+      <div class="flex items-center justify-between">
+        <h2 class="text-2xl font-bold">Jugadores: <span id="lobby-count">0</span></h2>
+        <button id="start-game" disabled class="rounded-2xl bg-emerald-500 enabled:hover:bg-emerald-400 disabled:opacity-40 px-8 py-3 text-xl font-bold text-black">Comenzar Juego</button>
+      </div>
+      <ul id="lobby-players" class="flex flex-wrap gap-3"></ul>
+      <p id="lobby-error" class="text-red-300"></p>
+    </section>
+
+    <section id="screen-question" class="hidden space-y-6">
+      <div class="flex items-center justify-between text-xl">
+        <span id="question-counter" class="font-semibold text-indigo-200"></span>
+        <span id="answer-progress" class="font-semibold text-indigo-200"></span>
+      </div>
+      <h2 id="question-text" class="text-4xl font-extrabold text-center min-h-[6rem]"></h2>
+      <div class="flex items-center gap-4">
+        <div class="h-4 flex-1 rounded-full bg-indigo-900 overflow-hidden"><div id="timer-bar" class="h-full bg-white transition-all duration-1000 ease-linear" style="width:100%"></div></div>
+        <span id="timer-value" class="text-5xl font-black w-20 text-right"></span>
+      </div>
+      <div id="question-options" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </section>
+
+    <section id="screen-results" class="hidden space-y-6">
+      <h2 id="results-question" class="text-3xl font-bold text-center"></h2>
+      <div id="results-options" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      <h3 class="text-2xl font-bold pt-4">Ranking</h3>
+      <ol id="results-ranking" class="space-y-2"></ol>
+      <div class="text-center pt-4">
+        <button id="next-question" class="rounded-2xl bg-emerald-500 hover:bg-emerald-400 px-10 py-4 text-2xl font-bold text-black"></button>
+      </div>
+    </section>
+
+    <section id="screen-final" class="hidden space-y-8 text-center">
+      <h2 class="text-5xl font-black">¡Podio final!</h2>
+      <div id="podium" class="flex items-end justify-center gap-4 min-h-[16rem]"></div>
+      <ol id="final-ranking" class="space-y-2 text-left max-w-xl mx-auto"></ol>
+      <button id="new-game" class="rounded-2xl bg-indigo-500 hover:bg-indigo-400 px-8 py-3 text-xl font-bold">Nueva partida</button>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="host.js"></script>
+</body>
+</html>

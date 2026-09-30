@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quiz en vivo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-indigo-950 text-white">
+  <div id="connection-banner" class="hidden bg-amber-500 text-black text-center py-1 text-sm font-semibold">Reconectando…</div>
+  <div id="host-banner" class="hidden bg-amber-500 text-black text-center py-1 text-sm font-semibold">El anfitrión se reconecta…</div>
+
+  <main class="mx-auto max-w-md min-h-screen p-4 flex flex-col justify-center">
+    <section id="screen-join" class="hidden space-y-4">
+      <h1 class="text-3xl font-extrabold text-center">Únete al quiz</h1>
+      <form id="join-form" class="space-y-3">
+        <input id="pin-input" inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="off" placeholder="PIN de 6 dígitos" required
+               class="w-full rounded-xl bg-white text-indigo-950 px-4 py-4 text-2xl text-center font-bold tracking-widest">
+        <input id="nickname-input" maxlength="20" autocomplete="off" placeholder="Tu apodo" required
+               class="w-full rounded-xl bg-white text-indigo-950 px-4 py-4 text-2xl text-center font-bold">
+        <button class="w-full rounded-xl bg-emerald-500 py-4 text-2xl font-bold text-black active:bg-emerald-400">Entrar</button>
+      </form>
+      <p id="join-error" class="text-red-300 text-center min-h-[1.5rem]"></p>
+    </section>
+
+    <section id="screen-waiting" class="hidden text-center space-y-4">
+      <p class="text-3xl font-extrabold">¡Estás dentro!</p>
+      <p id="waiting-nickname" class="text-xl text-indigo-200"></p>
+      <p id="waiting-message" class="text-lg">Esperando al anfitrión…</p>
+    </section>
+
+    <section id="screen-question" class="hidden space-y-4">
+      <div class="flex justify-between text-indigo-200 font-semibold">
+        <span id="question-counter"></span>
+        <span id="timer-value" class="text-2xl text-white"></span>
+      </div>
+      <p id="question-text" class="text-xl font-bold text-center"></p>
+      <div id="answer-buttons" class="grid grid-cols-2 gap-3"></div>
+      <p id="answer-status" class="text-center text-lg font-semibold min-h-[1.75rem]"></p>
+    </section>
+
+    <section id="screen-result" class="hidden text-center space-y-4">
+      <p id="result-title" class="text-5xl font-black"></p>
+      <p id="result-points" class="text-2xl"></p>
+      <p class="text-indigo-200">Puntaje acumulado</p>
+      <p id="result-score" class="text-6xl font-black"></p>
+      <p id="result-rank" class="text-xl"></p>
+      <p id="result-footer" class="text-indigo-200"></p>
+    </section>
+
+    <section id="screen-closed" class="hidden text-center space-y-4">
+      <p class="text-3xl font-extrabold">La sala se cerró</p>
+      <p id="closed-reason" class="text-indigo-200"></p>
+      <button id="rejoin" class="rounded-xl bg-indigo-500 px-6 py-3 text-xl font-bold">Volver al inicio</button>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="player.js"></script>
+</body>
+</html>

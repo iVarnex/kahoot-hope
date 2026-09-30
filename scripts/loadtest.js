@@ -30,6 +30,7 @@ async function main() {
   console.log(`room ${created.pin} created`);
 
   const resultsSeen = new Array(playerCount).fill(0);
+  const finalsSeen = new Array(playerCount).fill(0);
   const players = await Promise.all(
     Array.from({ length: playerCount }, async (_unused, index) => {
       const socket = await connect();
@@ -45,6 +46,9 @@ async function main() {
       });
       socket.on('player:result', () => {
         resultsSeen[index] += 1;
+      });
+      socket.on('player:final', ({ rank, totalPlayers }) => {
+        if (rank >= 1 && totalPlayers === playerCount) finalsSeen[index] += 1;
       });
       return socket;
     }),
@@ -64,13 +68,15 @@ async function main() {
   const { ranking } = await finished;
   await new Promise((resolve) => setTimeout(resolve, 1500));
 
-  const expectedResults = QUESTION_COUNT + 1;
+  const expectedResults = QUESTION_COUNT;
   const playersMissingResults = resultsSeen.filter((count) => count !== expectedResults).length;
+  const playersMissingFinal = finalsSeen.filter((count) => count !== 1).length;
   console.log(`top: ${ranking.slice(0, 3).map((entry) => `${entry.nickname}=${entry.score}`).join(', ')}`);
   console.log(`players with all ${expectedResults} results: ${playerCount - playersMissingResults}/${playerCount}`);
 
   for (const socket of [host, ...players]) socket.close();
-  process.exit(playersMissingResults === 0 ? 0 : 1);
+  console.log(`players with final position: ${playerCount - playersMissingFinal}/${playerCount}`);
+  process.exit(playersMissingResults === 0 && playersMissingFinal === 0 ? 0 : 1);
 }
 
 main().catch((error) => {

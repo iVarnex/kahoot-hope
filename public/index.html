@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Quiz en vivo</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body class="min-h-screen bg-indigo-950 text-white">
   <div id="connection-banner" class="hidden bg-amber-500 text-black text-center py-1 text-sm font-semibold">Reconectando…</div>
@@ -48,6 +49,15 @@
       <p id="result-footer" class="text-indigo-200"></p>
     </section>
 
+    <section id="screen-final" class="hidden text-center space-y-4">
+      <p id="final-medal" class="text-8xl float-soft"></p>
+      <p id="final-rank" class="text-5xl font-black"></p>
+      <p id="final-message" class="text-xl text-indigo-200"></p>
+      <p id="final-score" class="text-3xl font-bold"></p>
+      <p class="text-indigo-200 pt-2">Podio</p>
+      <ol id="final-podium" class="space-y-2 text-left"></ol>
+    </section>
+
     <section id="screen-closed" class="hidden text-center space-y-4">
       <p class="text-3xl font-extrabold">La sala se cerró</p>
       <p id="closed-reason" class="text-indigo-200"></p>
@@ -56,6 +66,7 @@
   </main>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="effects.js"></script>
   <script src="player.js"></script>
 </body>
 </html>

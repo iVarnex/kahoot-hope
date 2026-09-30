@@ -18,6 +18,7 @@ const ANSWER_GRACE_MS = 1000;
 const HOST_RECONNECT_GRACE_MS = 60 * 1000;
 const TIMER_TICK_MS = 1000;
 const RANKING_SIZE = 10;
+const PODIUM_SIZE = 3;
 const MAX_SOCKET_PAYLOAD_BYTES = 10 * 1024;
 
 const STATES = { LOBBY: 'LOBBY', QUESTION: 'QUESTION', SCOREBOARD: 'SCOREBOARD', FINISHED: 'FINISHED' };
@@ -269,7 +270,19 @@ async function finishGame(pin) {
   const players = await store.getPlayers(pin);
   const ranking = buildRanking(players);
   io.to(pin).emit('game:finished', { ranking: ranking.slice(0, RANKING_SIZE) });
-  emitPlayerResults(players, ranking);
+  emitPlayerFinals(players, ranking);
+}
+
+function emitPlayerFinals(players, ranking) {
+  for (const [playerId, player] of Object.entries(players)) {
+    if (!player.connected) continue;
+    io.to(player.socketId).emit('player:final', {
+      score: player.score,
+      rank: ranking.find((entry) => entry.playerId === playerId).rank,
+      totalPlayers: ranking.length,
+      podium: ranking.slice(0, PODIUM_SIZE),
+    });
+  }
 }
 
 async function endQuestionIfEveryoneAnswered(meta) {

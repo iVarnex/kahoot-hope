@@ -10,6 +10,8 @@ const OPTION_STYLES = [
 ];
 const PODIUM_HEIGHTS = ['h-56', 'h-40', 'h-28'];
 const PODIUM_ORDER = [1, 0, 2];
+const PODIUM_STEP_SECONDS = 0.5;
+const URGENT_TIMER_SECONDS = 5;
 
 const socket = io({ transports: ['websocket'] });
 const $ = (id) => document.getElementById(id);
@@ -38,6 +40,7 @@ function saveSession(value) {
 
 function showScreen(name) {
   for (const screenName of SCREEN_NAMES) $(`screen-${screenName}`).classList.toggle('hidden', screenName !== name);
+  animateEntrance($(`screen-${name}`));
 }
 
 function element(tag, className, text) {
@@ -58,13 +61,14 @@ function updateLobbyPlayers(players) {
   $('lobby-count').textContent = players.length;
   $('start-game').disabled = players.length === 0;
   $('lobby-players').replaceChildren(
-    ...players.map((nickname) => element('li', 'rounded-full bg-indigo-800 px-4 py-2 text-lg font-semibold', nickname)),
+    ...players.map((nickname) => element('li', 'join-chip rounded-full bg-indigo-800 px-4 py-2 text-lg font-semibold', nickname)),
   );
 }
 
 function optionCard(option, index, extraClass = '') {
   const style = OPTION_STYLES[index];
-  const card = element('div', `flex items-center gap-4 rounded-2xl p-5 text-2xl font-bold ${style.background} ${extraClass}`);
+  const card = element('div', `pop-in flex items-center gap-4 rounded-2xl p-5 text-2xl font-bold ${style.background} ${extraClass}`);
+  card.style.setProperty('--i', index);
   card.append(element('span', 'text-4xl', style.symbol), element('span', 'flex-1', option));
   return card;
 }
@@ -86,15 +90,17 @@ function updateAnswerProgress(answered, total) {
 
 function updateTimer(remaining) {
   $('timer-value').textContent = remaining;
+  $('timer-value').classList.toggle('timer-urgent', remaining <= URGENT_TIMER_SECONDS);
   $('timer-bar').style.width = `${Math.max(0, (remaining / currentTimeLimit) * 100)}%`;
 }
 
 function renderRanking(listElement, ranking) {
   const topScore = Math.max(1, ...ranking.map((entry) => entry.score));
   listElement.replaceChildren(
-    ...ranking.map((entry) => {
-      const row = element('li', 'relative overflow-hidden rounded-xl bg-indigo-900 px-4 py-3 flex justify-between text-xl font-semibold');
+    ...ranking.map((entry, index) => {
+      const row = element('li', 'slide-in relative overflow-hidden rounded-xl bg-indigo-900 px-4 py-3 flex justify-between text-xl font-semibold');
       const bar = element('div', 'absolute inset-y-0 left-0 bg-indigo-600/60');
+      row.style.setProperty('--i', index);
       bar.style.width = `${(entry.score / topScore) * 100}%`;
       const name = element('span', 'relative', `${entry.rank}. ${entry.nickname}`);
       const score = element('span', 'relative', `${entry.score}${entry.lastPoints ? `  (+${entry.lastPoints})` : ''}`);
@@ -124,13 +130,16 @@ function renderFinal(ranking) {
     ...PODIUM_ORDER.filter((position) => ranking[position]).map((position) => {
       const entry = ranking[position];
       const column = element('div', 'flex flex-col items-center gap-2');
-      const block = element('div', `w-40 ${PODIUM_HEIGHTS[position]} rounded-t-2xl bg-amber-400 text-black flex items-center justify-center text-5xl font-black`, position + 1);
+      const block = element('div', `grow-up w-40 ${PODIUM_HEIGHTS[position]} rounded-t-2xl bg-amber-400 text-black flex items-center justify-center text-5xl font-black`, position + 1);
+      // Third place rises first, the winner last.
+      block.style.setProperty('--delay', `${(PODIUM_ORDER.length - 1 - position) * PODIUM_STEP_SECONDS}s`);
       column.append(element('p', 'text-xl font-bold', entry.nickname), element('p', 'text-indigo-200', `${entry.score} pts`), block);
       return column;
     }),
   );
   renderRanking($('final-ranking'), ranking);
   showScreen('final');
+  launchConfetti();
 }
 
 function applySnapshot(snapshot) {

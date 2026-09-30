@@ -1,7 +1,11 @@
 'use strict';
 
 const SESSION_STORAGE_KEY = 'kahoot.player.session';
-const SCREEN_NAMES = ['join', 'waiting', 'question', 'result', 'closed'];
+const SCREEN_NAMES = ['join', 'waiting', 'question', 'result', 'final', 'closed'];
+const URGENT_TIMER_SECONDS = 5;
+const FINAL_MEDALS = { 1: '🥇', 2: '🥈', 3: '🥉' };
+const TOP_HALF_RATIO = 0.5;
+const PODIUM_SIZE = 3;
 const OPTION_STYLES = [
   { background: 'bg-red-600', symbol: '▲' },
   { background: 'bg-blue-600', symbol: '◆' },
@@ -39,6 +43,7 @@ function generatePlayerId() {
 
 function showScreen(name) {
   for (const screenName of SCREEN_NAMES) $(`screen-${screenName}`).classList.toggle('hidden', screenName !== name);
+  animateEntrance($(`screen-${name}`));
 }
 
 function renderAnswerButtons(options, isLocked) {
@@ -46,7 +51,8 @@ function renderAnswerButtons(options, isLocked) {
     ...options.map((option, index) => {
       const style = OPTION_STYLES[index];
       const button = document.createElement('button');
-      button.className = `${style.background} rounded-2xl p-4 min-h-[7rem] text-lg font-bold flex flex-col items-center justify-center gap-1 disabled:opacity-40`;
+      button.className = `${style.background} pop-in rounded-2xl p-4 min-h-[7rem] text-lg font-bold flex flex-col items-center justify-center gap-1 transition-transform active:scale-95 disabled:opacity-40`;
+      button.style.setProperty('--i', index);
       button.disabled = isLocked;
       const symbol = document.createElement('span');
       symbol.className = 'text-4xl';
@@ -64,10 +70,15 @@ function renderQuestion(question, remaining, alreadyAnswered = false) {
   hasAnsweredCurrentQuestion = alreadyAnswered;
   $('question-counter').textContent = `${question.index + 1} / ${question.total}`;
   $('question-text').textContent = question.question;
-  $('timer-value').textContent = remaining;
+  updateTimer(remaining);
   $('answer-status').textContent = alreadyAnswered ? 'Respuesta enviada' : '';
   renderAnswerButtons(question.options, alreadyAnswered);
   showScreen('question');
+}
+
+function updateTimer(remaining) {
+  $('timer-value').textContent = remaining;
+  $('timer-value').classList.toggle('timer-urgent', remaining <= URGENT_TIMER_SECONDS);
 }
 
 function submitAnswer(choiceIndex) {
@@ -80,14 +91,44 @@ function submitAnswer(choiceIndex) {
   });
 }
 
-function renderResult({ correct, answered, points, score, rank, totalPlayers }, isFinal = false) {
+function renderResult({ correct, answered, points, score, rank, totalPlayers }) {
   $('result-title').textContent = correct ? '¡Correcto!' : answered ? 'Incorrecto' : 'Sin respuesta';
-  $('result-title').className = `text-5xl font-black ${correct ? 'text-emerald-400' : 'text-red-400'}`;
+  $('result-title').className = `text-5xl font-black ${correct ? 'text-emerald-400 bounce-big' : 'text-red-400 shake'}`;
   $('result-points').textContent = correct ? `+${points} puntos` : '+0 puntos';
   $('result-score').textContent = score;
   $('result-rank').textContent = `Puesto ${rank} de ${totalPlayers}`;
-  $('result-footer').textContent = isFinal ? '¡Fin de la partida!' : 'Esperando la siguiente pregunta…';
+  $('result-footer').textContent = 'Esperando la siguiente pregunta…';
   showScreen('result');
+}
+
+function finalMessage(rank, totalPlayers) {
+  if (rank === 1) return '¡Eres el campeón!';
+  if (rank <= PODIUM_SIZE) return '¡Subiste al podio!';
+  if (rank <= totalPlayers * TOP_HALF_RATIO) return '¡Muy buen trabajo, quedaste en la mitad superior!';
+  return '¡Gracias por jugar! Sigue practicando y la próxima vas por más.';
+}
+
+function renderFinal({ score, rank, totalPlayers, podium }) {
+  $('final-medal').textContent = FINAL_MEDALS[rank] || '🎉';
+  $('final-rank').textContent = `Puesto ${rank} de ${totalPlayers}`;
+  $('final-message').textContent = finalMessage(rank, totalPlayers);
+  $('final-score').textContent = `${score} puntos`;
+  $('final-podium').replaceChildren(
+    ...podium.map((entry, index) => {
+      const row = document.createElement('li');
+      const isSelf = entry.rank === rank && entry.score === score;
+      row.className = `slide-in flex justify-between rounded-xl px-4 py-3 text-lg font-semibold ${isSelf ? 'bg-amber-400 text-black' : 'bg-indigo-900'}`;
+      row.style.setProperty('--i', index + 3);
+      const name = document.createElement('span');
+      name.textContent = `${FINAL_MEDALS[entry.rank]} ${entry.nickname}`;
+      const points = document.createElement('span');
+      points.textContent = entry.score;
+      row.append(name, points);
+      return row;
+    }),
+  );
+  showScreen('final');
+  if (rank <= PODIUM_SIZE) launchConfetti();
 }
 
 function applySnapshot(snapshot) {
@@ -99,11 +140,16 @@ function applySnapshot(snapshot) {
     case 'QUESTION':
       return renderQuestion(snapshot.question, snapshot.remaining, self.answered);
     case 'SCOREBOARD':
+      return renderResult({
+        correct: self.correct === true,
+        answered: self.answered,
+        points: self.points,
+        score: self.score,
+        rank: self.rank,
+        totalPlayers: self.totalPlayers,
+      });
     case 'FINISHED':
-      return renderResult(
-        { correct: self.correct === true, answered: self.answered, points: self.points, score: self.score, rank: self.rank, totalPlayers: self.totalPlayers },
-        snapshot.state === 'FINISHED',
-      );
+      return renderFinal({ ...self, podium: snapshot.ranking.slice(0, PODIUM_SIZE) });
   }
 }
 
@@ -134,17 +180,13 @@ socket.on('connect', () => {
 socket.on('disconnect', () => $('connection-banner').classList.remove('hidden'));
 
 socket.on('question:start', (question) => renderQuestion(question, question.remaining));
-socket.on('timer', ({ remaining }) => {
-  $('timer-value').textContent = remaining;
-});
+socket.on('timer', ({ remaining }) => updateTimer(remaining));
 socket.on('question:end', () => {
   hasAnsweredCurrentQuestion = true;
   for (const button of $('answer-buttons').children) button.disabled = true;
 });
 socket.on('player:result', (result) => renderResult(result));
-socket.on('game:finished', () => {
-  $('result-footer').textContent = '¡Fin de la partida!';
-});
+socket.on('player:final', renderFinal);
 socket.on('host:status', ({ connected }) => $('host-banner').classList.toggle('hidden', connected));
 socket.on('room:closed', ({ reason }) => {
   saveSession(null);
